@@ -15,9 +15,9 @@ This is built on the general urllib3 and API calls, not the OpenAI python packag
 
 2. Enter the following into the .env file
 
-   OPENAI_API_KEY=\<your OpenAI apikey>
-   COG_SERVICE_KEY=\<your cognitive service key>
-   COG_SERVICE_REGION=\<your cognitive service region>
+   - OPENAI_API_KEY=\<your OpenAI apikey>
+   - COG_SERVICE_KEY=\<your cognitive service key>
+   - COG_SERVICE_REGION=\<your cognitive service region>
 
 3. run "main.py"
 
