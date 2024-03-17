@@ -12,7 +12,11 @@ def main():
     speech_config = speech_sdk.SpeechConfig(cog_key, cog_region)
 
     question = speech_to_text(speech_config)
-    print('Question: ' + question)
+    if question:
+        print('Question: ' + question)
+    else:
+        print('Error, exiting')
+        exit()
 
     response = chat_with_gpt(openai_key, question)
     if response:
@@ -22,6 +26,21 @@ def main():
 
     print('Answer: ' + answer)
     text_to_speech(speech_config, answer)
+
+    # Ask if you want to save your question and answer
+    text_to_speech(speech_config, 'Do you want to save your question and answer? Please answer yes or no')
+    reply = speech_to_text(speech_config)
+    print(reply)
+    if 'yes' in reply.lower():
+        text_to_speech(speech_config, 'Saving now')
+        with open('output.txt', 'w') as f:
+            f.write('Question: ' + question + '\n')
+            f.write('Answer: ' + answer + '\n')
+        text_to_speech(speech_config, 'Save, please check output.txt, bye!')
+    elif 'no' in reply.lower():
+        text_to_speech(speech_config, 'Alright, will not save it, bye!')
+    else:
+        text_to_speech(speech_config, 'I am unsure what you meant, it is not saved, bye!')
 
 def chat_with_gpt(openai_key, question):
     http = urllib3.PoolManager(num_pools=1, timeout=10.0)
