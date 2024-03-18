@@ -1,8 +1,8 @@
-# QnA GPT
+# Averlie the QnA bot
 
 A simple project that takes in a voice question and tells you the answer.
 
-This is built on the general urllib3 and API calls, not the OpenAI python package. 
+This is built on the general urllib3 and API calls. It will persist your conversations until you close and reopen the script. Just keep talking to it. :)
 
 ### Requirements
 
@@ -20,6 +20,11 @@ This is built on the general urllib3 and API calls, not the OpenAI python packag
    - COG_SERVICE_REGION=\<your cognitive service region>
 
 3. run "main.py"
+
+4. Ask your questions in English or do one of the following,
+  
+   - Say "Shut down" to close the conversation
+   - Say "Save output" to save the output to a text file
 
 ### Backend engines
 - Azure cognitive services (speech service)
