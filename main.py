@@ -18,44 +18,43 @@ def main():
     averlie('I am Averlie, how can I help?')
 
     while True:
-        while True:
-            question = speech_to_text()
+        question = speech_to_text()
 
-            if 'Everly' in question:
-                question = question.replace('Everly', 'Averlie')
+        if 'Everly' in question:
+            question = question.replace('Everly', 'Averlie')
 
-            print('[You] ' + question)
+        print(f'[You] {question}')
 
-            if 'save output' in question.lower() or 'safe output' in question.lower():
-                save_conversation(messages)
-                continue
-
-            if 'shut down' in question.lower() or 'shutdown' in question.lower():
-                averlie('Shutting down now')
-                exit()
-
-            break
-
-        response = chat_with_gpt(openai_key, messages)
-        if response:
-            answer = response['choices'][0]['message']['content'].replace('**', '')
-            averlie(answer)
-            messages.append({'role': 'user', 'content': question})
-            messages.append({'role': 'assistant', 'content': answer})
+        if 'save output' in question.lower() or 'safe output' in question.lower():
+            save_conversation(messages)
+            continue
+        elif 'shut down' in question.lower() or 'shutdown' in question.lower():
+            averlie('Shutting down now.')
+            exit()
         else:
-            averlie('There is an error, please repeat your question')
+            messages.append({'role': 'user', 'content': question})
+            response = chat_with_gpt(openai_key, messages)
+            if response:
+                answer = response['choices'][0]['message']['content'].replace('**', '')
+                averlie(answer)
+                messages.append({'role': 'assistant', 'content': answer})
+            else:
+                averlie('There is an error, please repeat your question.')
 
 def save_conversation(messages):
-    averlie('Saving now')
-    with open('output.json', 'w') as f:
-        json.dump(messages, f)
-    with open('output.txt', 'w') as f:
-        for i in messages:
-            if i['role'] == 'user':
-                f.write('[user] ' + i['content'] + '\n')
-            elif i['role'] == 'assistant':
-                f.write('[Averlie] ' + i['content'] + '\n')
-    averlie('Saved, please check the file named output')
+    if len(messages) == 1:
+        averlie('Nothing to save.')
+    else:
+        averlie('Saving now.')
+        # with open('output.json', 'w') as f:
+        #     json.dump(messages, f)
+        with open('output.txt', 'w') as f:
+            for i in messages[1:]:
+                if i['role'] == 'user':
+                    f.write(f'[You] {i["content"]}\n')
+                elif i['role'] == 'assistant':
+                    f.write(f'[Averlie] {i["content"]}\n')
+        averlie('Saved, please check the output file.')
 
 def chat_with_gpt(openai_key, messages):
     http = urllib3.PoolManager(num_pools=1)
@@ -65,7 +64,6 @@ def chat_with_gpt(openai_key, messages):
         'Content-Type': 'application/json',
         'Authorization': apiKey
         }
-
     body = {
         'model': 'gpt-3.5-turbo-0125',
         'messages': messages
@@ -79,21 +77,20 @@ def chat_with_gpt(openai_key, messages):
             j = json.loads(r.data)
             return j
         else:
-            print(str(r.status) + '... Trying again')
+            print(f'Error {r.status}... Trying again')
             time.sleep(5)
 
 def speech_to_text():
     audio_config = speech_sdk.AudioConfig(use_default_microphone=True)
-
+    
     while True:
         speech_recognizer = speech_sdk.SpeechRecognizer(speech_config, audio_config)
         print('Speak now...')
-
         speech = speech_recognizer.recognize_once_async().get()
         if speech.reason == speech_sdk.ResultReason.RecognizedSpeech:
             return speech.text
         else:
-            print('Not getting it, try again...')
+            print('Try again...')
                 
 def text_to_speech(message):
     speech_config.speech_synthesis_voice_name = 'en-AU-CarlyNeural' # en-SG-LunaNeural, en-GB-MaisieNeural, en-AU-CarlyNeural
@@ -101,13 +98,13 @@ def text_to_speech(message):
     speak = speech_synthesizer.speak_text_async(message).get()
     if not speak.reason == speech_sdk.ResultReason.SynthesizingAudioCompleted:
         cancellation_details = speak.cancellation_details
-        print("Speech synthesis cancelled: {}".format(cancellation_details.reason))
+        print(f'Speech synthesis cancelled: {cancellation_details.reason}')
         if cancellation_details.reason == speech_sdk.CancellationReason.Error:
             if cancellation_details.error_details:
-                print("Error details: {}".format(cancellation_details.error_details))
+                print(f'Error details: {cancellation_details.error_details}')
 
 def averlie(message):
-    print('[Averlie] ' + message)
+    print(f'[Averlie] {message}')
     text_to_speech(message)
 
 if __name__ == '__main__':
