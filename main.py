@@ -13,15 +13,12 @@ def main():
     cog_region = os.getenv('COG_SERVICE_REGION')
     openai_key = os.environ.get('OPENAI_API_KEY')
     speech_config = speech_sdk.SpeechConfig(cog_key, cog_region)
-    messages = [{"role": "system", "content": "You are Averlie."}]
+    messages = [{"role": "system", "content": "You are Gabby."}]
 
-    averlie('I am Averlie, how can I help?')
+    gabby('I am Gabby, how can I help?')
 
     while True:
         question = speech_to_text()
-
-        if 'Everly' in question:
-            question = question.replace('Everly', 'Averlie')
 
         print(f'[You] {question}')
 
@@ -29,23 +26,23 @@ def main():
             save_conversation(messages)
             continue
         elif 'shut down' in question.lower() or 'shutdown' in question.lower():
-            averlie('Shutting down now.')
+            gabby('Shutting down now.')
             exit()
         else:
             messages.append({'role': 'user', 'content': question})
             response = chat_with_gpt(openai_key, messages)
             if response:
                 answer = response['choices'][0]['message']['content'].replace('**', '')
-                averlie(answer)
+                gabby(answer)
                 messages.append({'role': 'assistant', 'content': answer})
             else:
-                averlie('There is an error, please repeat your question.')
+                gabby('There is an error, please repeat your question.')
 
 def save_conversation(messages):
     if len(messages) == 1:
-        averlie('Nothing to save.')
+        gabby('Nothing to save.')
     else:
-        averlie('Saving now.')
+        gabby('Saving now.')
         # with open('output.json', 'w') as f:
         #     json.dump(messages, f)
         with open('output.txt', 'w') as f:
@@ -53,8 +50,8 @@ def save_conversation(messages):
                 if i['role'] == 'user':
                     f.write(f'[You] {i["content"]}\n')
                 elif i['role'] == 'assistant':
-                    f.write(f'[Averlie] {i["content"]}\n')
-        averlie('Saved, please check the output file.')
+                    f.write(f'[gabby] {i["content"]}\n')
+        gabby('Saved, please check the output file.')
 
 def chat_with_gpt(openai_key, messages):
     http = urllib3.PoolManager(num_pools=1)
@@ -103,8 +100,8 @@ def text_to_speech(message):
             if cancellation_details.error_details:
                 print(f'Error details: {cancellation_details.error_details}')
 
-def averlie(message):
-    print(f'[Averlie] {message}')
+def gabby(message):
+    print(f'[Gabby] {message}')
     text_to_speech(message)
 
 if __name__ == '__main__':

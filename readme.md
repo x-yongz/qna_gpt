@@ -1,4 +1,4 @@
-# Averlie the QnA bot
+# Gabby the QnA bot
 
 A simple project that takes in a voice question and tells you the answer.
 
