@@ -1,25 +1,29 @@
 import azure.cognitiveservices.speech as speech_sdk
+import datetime
 import json
 import os
+import threading
 import time
 import urllib3
 from dotenv import load_dotenv
 
 def main():
     global speech_config
+    global speech_recognizer
 
     load_dotenv()
     cog_key = os.getenv('COG_SERVICE_KEY')
     cog_region = os.getenv('COG_SERVICE_REGION')
     openai_key = os.environ.get('OPENAI_API_KEY')
     speech_config = speech_sdk.SpeechConfig(cog_key, cog_region)
-    messages = [{"role": "system", "content": "You are Gabby."}]
+    speech_config.speech_synthesis_voice_name = 'en-AU-CarlyNeural'
+    speech_recognizer = speech_sdk.SpeechRecognizer(speech_config)
 
+    messages = [{"role": "system", "content": "You are Gabby."}]
     gabby('I am Gabby, how can I help?')
 
     while True:
         question = speech_to_text()
-
         print(f'[You] {question}')
 
         if 'save output' in question.lower() or 'safe output' in question.lower():
@@ -43,9 +47,10 @@ def save_conversation(messages):
         gabby('Nothing to save.')
     else:
         gabby('Saving now.')
-        # with open('output.json', 'w') as f:
-        #     json.dump(messages, f)
-        with open('output.txt', 'w') as f:
+        timestamp = str(datetime.datetime.now().strftime("%Y%m%d_%H%M"))
+        with open(f'output_{timestamp}hrs.json', 'w') as f:
+            json.dump(messages, f)
+        with open(f'output_{timestamp}hrs.txt', 'w') as f:
             for i in messages[1:]:
                 if i['role'] == 'user':
                     f.write(f'[You] {i["content"]}\n')
@@ -78,27 +83,60 @@ def chat_with_gpt(openai_key, messages):
             time.sleep(5)
 
 def speech_to_text():
-    audio_config = speech_sdk.AudioConfig(use_default_microphone=True)
-    
-    while True:
-        speech_recognizer = speech_sdk.SpeechRecognizer(speech_config, audio_config)
-        print('Speak now...')
-        speech = speech_recognizer.recognize_once_async().get()
-        if speech.reason == speech_sdk.ResultReason.RecognizedSpeech:
-            return speech.text
-        else:
-            print('Try again...')
-                
+    print('Speak now...')
+    question = None
+
+    def recognized_callback(evt):
+        nonlocal question
+        question = evt.result.text
+
+    speech_recognizer.recognized.connect(recognized_callback)
+    speech_recognizer.start_continuous_recognition_async()
+    while question is None:
+        time.sleep(0.1)
+    speech_recognizer.stop_continuous_recognition_async().get()
+
+    return question
+
 def text_to_speech(message):
-    speech_config.speech_synthesis_voice_name = 'en-AU-CarlyNeural' # en-SG-LunaNeural, en-GB-MaisieNeural, en-AU-CarlyNeural
-    speech_synthesizer = speech_sdk.SpeechSynthesizer(speech_config=speech_config)
-    speak = speech_synthesizer.speak_text_async(message).get()
-    if not speak.reason == speech_sdk.ResultReason.SynthesizingAudioCompleted:
-        cancellation_details = speak.cancellation_details
-        print(f'Speech synthesis cancelled: {cancellation_details.reason}')
-        if cancellation_details.reason == speech_sdk.CancellationReason.Error:
-            if cancellation_details.error_details:
-                print(f'Error details: {cancellation_details.error_details}')
+    speech_synthesizer = speech_sdk.SpeechSynthesizer(speech_config)
+    speaking = True
+
+    def synthesize_speech():
+        nonlocal speaking
+        speak = speech_synthesizer.speak_text_async(message).get()
+        if not speak.reason == speech_sdk.ResultReason.SynthesizingAudioCompleted:
+            cancellation_details = speak.cancellation_details
+            print(f'Speech synthesis cancelled: {cancellation_details.reason}')
+            if cancellation_details.reason == speech_sdk.CancellationReason.Error:
+                if cancellation_details.error_details:
+                    print(f'Error details: {cancellation_details.error_details}')
+        speaking = False
+    
+    def listen_for_stop():
+        recognition_active = True
+
+        def recognized_callback(evt):
+            nonlocal recognition_active
+            if evt.result.reason == speech_sdk.ResultReason.RecognizedSpeech:
+                if "stop" in evt.result.text.lower():
+                    print(f'[You] {evt.result.text}')
+                    speech_recognizer.stop_continuous_recognition_async()
+                    speech_synthesizer.stop_speaking_async().get()
+                    recognition_active = False
+
+        speech_recognizer.recognized.connect(recognized_callback) # Attach a callback function
+        speech_recognizer.start_continuous_recognition_async() # Starts listening
+        while speaking and recognition_active:
+            time.sleep(0.1)
+        speech_recognizer.stop_continuous_recognition_async().get() # Stop if its not already stopped
+
+    speech_thread = threading.Thread(target=synthesize_speech)
+    stop_thread = threading.Thread(target=listen_for_stop)
+    speech_thread.start()
+    stop_thread.start()
+    speech_thread.join()
+    stop_thread.join()
 
 def gabby(message):
     print(f'[Gabby] {message}')
