@@ -1,3 +1,5 @@
 .env
+client_secret.json
 output*
 *test*
+__pycache__
